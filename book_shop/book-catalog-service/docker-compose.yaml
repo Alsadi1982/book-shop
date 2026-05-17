@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: book_catalog_postgres
+    environment:
+      POSTGRES_DB: book_catalog_db
+      POSTGRES_USER: catalog_user
+      POSTGRES_PASSWORD: catalog_password
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=ru_RU.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog_user -d book_catalog_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - book_catalog_network
+    restart: unless-stopped
+
+  book-catalog-service:
+    build: .
+    container_name: book_catalog_app
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/book_catalog_db
+      - SPRING_DATASOURCE_USERNAME=catalog_user
+      - SPRING_DATASOURCE_PASSWORD=catalog_password
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: |
+      sh -c "
+        echo 'Ожидание PostgreSQL...' &&
+        while ! nc -z postgres 5432; do
+          sleep 2
+          echo 'PostgreSQL еще не готов...'
+        done &&
+        echo 'PostgreSQL готов! Запускаем приложение...' &&
+        exec java -jar app.jar
+      "
+    networks:
+      - book_catalog_network
+    restart: unless-stopped
+
+networks:
+  book_catalog_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

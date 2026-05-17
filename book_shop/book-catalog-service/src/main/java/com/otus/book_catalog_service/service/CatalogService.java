@@ -51,15 +51,11 @@ public class CatalogService {
         return categoryRepository.findByCode(code).orElse(null);
     }
 
-    public Category getCategory(Long id) {
-        return categoryRepository.findById(id).orElse(null);
-    }
-
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }
 
-    @CacheEvict(value = "books", key = "#book.id")
+
     @Transactional
     public Book createBook(BookRequest requestBook) {
         Book book = new Book();

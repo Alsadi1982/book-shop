@@ -21,6 +21,8 @@ public class Book {
     @Column(unique = true, nullable = false)
     private String isbn;
 
+    //ISBN (International Standard Book Number) - это международный стандартный книжный номер,
+    // уникальный идентификатор книги.
     @Column(nullable = false)
     private String title;
 

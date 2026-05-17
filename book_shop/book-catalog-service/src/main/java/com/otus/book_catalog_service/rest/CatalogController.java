@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/catalog")
@@ -32,8 +33,13 @@ public class CatalogController {
     }
 
     @PostMapping("/books")
-    public ResponseEntity<Book> createBook(@Valid @RequestBody BookRequest book) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(catalogService.createBook(book));
+    public ResponseEntity<?> createBook(@Valid @RequestBody BookRequest book) {
+        try {
+            Book savedBook = catalogService.createBook(book);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedBook);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/books/{id}/stock")
@@ -69,9 +75,9 @@ public class CatalogController {
         return ResponseEntity.ok(catalogService.getAllCategories());
     }
 
-    @GetMapping("/categories/{id}")
-    public ResponseEntity<Category> getCategory(@PathVariable Long id) {
-        Category category = catalogService.getCategory(id);
+    @GetMapping("/categories/{code}")
+    public ResponseEntity<Category> getCategory(@PathVariable("code") String code) {
+        Category category = catalogService.getCategoryByCode(code);
         return category != null ? ResponseEntity.ok(category) : ResponseEntity.notFound().build();
     }
 }

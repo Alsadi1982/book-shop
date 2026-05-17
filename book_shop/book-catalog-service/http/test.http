@@ -1,0 +1,24 @@
+GET http://localhost:8081/api/catalog/books
+
+GET http://localhost:8081/api/catalog/books/2
+
+POST http://localhost:8081/api/catalog/books
+Content-Type: application/json
+{
+ "isbn": "978-5-699-00000-2",
+  "title": "Сказки русские народные",
+  "author": "Русский народ",
+  "description": "Сказки русские народные",
+  "price": 200,
+  "stockQuantity": 10,
+  "categoryId": 1,
+  "publisherId": 2
+}
+
+GET http://localhost:8081/api/catalog/categories
+
+GET http://localhost:8081/api/catalog/categories/FICTION
+
+PUT http://localhost:8081/api/catalog/books/1/stock?stock=10
+
+
