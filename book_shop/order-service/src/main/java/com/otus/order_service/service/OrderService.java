@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,58 +78,80 @@ public class OrderService {
             throw new RuntimeException("User not found with id: " + requestDTO.getUserId());
         }
 
+        BigDecimal total = BigDecimal.ZERO;
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        for (OrderItemRequestDTO itemDTO : requestDTO.getItems()) {
+            Map<String, Object> book = catalogServiceClient.getBook(itemDTO.getBookId());
+            if (book == null) {
+                throw new RuntimeException("Book not found: " + itemDTO.getBookId());
+            }
+
+            // Проверяем сток ДО создания заказа
+            boolean reserved = catalogServiceClient.checkAndReserveStock(itemDTO.getBookId(), itemDTO.getQuantity());
+            if (!reserved) {
+                throw new RuntimeException("Insufficient stock for book: " + book.get("title"));
+            }
+
+            // Создаем OrderItem (пока без сохранения)
+            OrderItem item = new OrderItem();
+            item.setBookId(itemDTO.getBookId());
+            item.setQuantity(itemDTO.getQuantity());
+            item.setBookTitle((String) book.get("title"));
+            BigDecimal price = new BigDecimal(book.get("price").toString());
+            item.setPrice(price);
+            item.setSubtotal(price.multiply(BigDecimal.valueOf(itemDTO.getQuantity())));
+
+            total = total.add(item.getSubtotal());
+            orderItems.add(item);
+        }
+
         // Generate unique order number
         String orderNumber;
         do {
             orderNumber = "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         } while (orderRepository.existsByOrderNumber(orderNumber));
 
-        // Convert DTO to Entity
-        Order order = orderMapper.toEntity(requestDTO);
+        // Now create the Order entity with validated data
+        Order order = new Order();
+        order.setUserId(requestDTO.getUserId());
         order.setOrderNumber(orderNumber);
         order.setOrderDate(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
+        order.setShippingAddress(requestDTO.getShippingAddress());
+        order.setPaymentMethod(requestDTO.getPaymentMethod());
 
-        BigDecimal total = BigDecimal.ZERO;
-
-        // Process each item
-        for (OrderItem item : order.getItems()) {
-            Map<String, Object> book = catalogServiceClient.getBook(item.getBookId());
-            if (book == null) {
-                throw new RuntimeException("Book not found: " + item.getBookId());
-            }
-
-            // Check and reserve stock
-            boolean reserved = catalogServiceClient.checkAndReserveStock(item.getBookId(), item.getQuantity());
-            if (!reserved) {
-                throw new RuntimeException("Insufficient stock for book: " + book.get("title"));
-            }
-
-            item.setBookTitle((String) book.get("title"));
-            BigDecimal price = new BigDecimal(book.get("price").toString());
-            item.setPrice(price);
-            item.setSubtotal(price.multiply(BigDecimal.valueOf(item.getQuantity())));
-            total = total.add(item.getSubtotal());
-        }
-
-        order.setTotalAmount(total);
         Order savedOrder = orderRepository.save(order);
 
-        // Save order items with correct order ID
-        for (OrderItem item : savedOrder.getItems()) {
-            item.setId(savedOrder.getId());
-            orderItemRepository.save(item);
+        if (savedOrder == null) {
+            throw new RuntimeException("Failed to save order");
         }
+
+        for (OrderItem item : orderItems) {
+            item.setOrderId(savedOrder.getId());
+        }
+        orderItemRepository.saveAll(orderItems);
+
+        // Set the saved items back to the order for the response
+//        savedOrder.setTotalAmount(total);
+        savedOrder.setItems(orderItems);
+//        savedOrder = orderRepository.save(savedOrder);
 
         OrderResponseDTO responseDTO = orderMapper.toResponseDTO(savedOrder);
 
         // Cache the response
-        cacheLock.writeLock().lock();
-        try {
-            orderCache.put(savedOrder.getId(), responseDTO);
-            orderNumberCache.put(savedOrder.getOrderNumber(), responseDTO);
-        } finally {
-            cacheLock.writeLock().unlock();
+        if (responseDTO != null) {
+            cacheLock.writeLock().lock();
+            try {
+                if (savedOrder.getId() != null) {
+                    orderCache.put(savedOrder.getId(), responseDTO);
+                }
+                if (savedOrder.getOrderNumber() != null) {
+                    orderNumberCache.put(savedOrder.getOrderNumber(), responseDTO);
+                }
+            } finally {
+                cacheLock.writeLock().unlock();
+            }
         }
 
         return responseDTO;
@@ -140,17 +163,25 @@ public class OrderService {
         if (order != null) {
             orderMapper.updateEntity(order, updateDTO);
             Order updatedOrder = orderRepository.save(order);
-            OrderResponseDTO responseDTO = orderMapper.toResponseDTO(updatedOrder);
 
-            cacheLock.writeLock().lock();
-            try {
-                orderCache.put(id, responseDTO);
-                orderNumberCache.put(updatedOrder.getOrderNumber(), responseDTO);
-            } finally {
-                cacheLock.writeLock().unlock();
+            if (updatedOrder != null) {
+                OrderResponseDTO responseDTO = orderMapper.toResponseDTO(updatedOrder);
+
+                // Кэшируем только если responseDTO не null
+                if (responseDTO != null) {
+                    cacheLock.writeLock().lock();
+                    try {
+                        orderCache.put(id, responseDTO);
+                        if (updatedOrder.getOrderNumber() != null) {
+                            orderNumberCache.put(updatedOrder.getOrderNumber(), responseDTO);
+                        }
+                    } finally {
+                        cacheLock.writeLock().unlock();
+                    }
+                }
+
+                return responseDTO;
             }
-
-            return responseDTO;
         }
         return null;
     }
@@ -161,7 +192,28 @@ public class OrderService {
         if (order != null) {
             orderMapper.updateEntity(order, updateDTO);
             Order updatedOrder = orderRepository.save(order);
-            return orderMapper.toResponseDTO(updatedOrder);
+
+            // Проверяем, что updatedOrder не null
+            if (updatedOrder != null) {
+                OrderResponseDTO responseDTO = orderMapper.toResponseDTO(updatedOrder);
+
+                // Кэшируем только если responseDTO не null
+                if (responseDTO != null) {
+                    cacheLock.writeLock().lock();
+                    try {
+                        if (updatedOrder.getId() != null) {
+                            orderCache.put(updatedOrder.getId(), responseDTO);
+                        }
+                        if (updatedOrder.getOrderNumber() != null) {
+                            orderNumberCache.put(updatedOrder.getOrderNumber(), responseDTO);
+                        }
+                    } finally {
+                        cacheLock.writeLock().unlock();
+                    }
+                }
+
+                return responseDTO;
+            }
         }
         return null;
     }
@@ -174,16 +226,23 @@ public class OrderService {
             existingOrder.setPaymentMethod(requestDTO.getPaymentMethod());
 
             Order updatedOrder = orderRepository.save(existingOrder);
-            OrderResponseDTO responseDTO = orderMapper.toResponseDTO(updatedOrder);
 
-            cacheLock.writeLock().lock();
-            try {
-                orderCache.put(id, responseDTO);
-            } finally {
-                cacheLock.writeLock().unlock();
+            // Проверяем, что updatedOrder не null
+            if (updatedOrder != null) {
+                OrderResponseDTO responseDTO = orderMapper.toResponseDTO(updatedOrder);
+
+                // Кэшируем только если responseDTO не null
+                if (responseDTO != null) {
+                    cacheLock.writeLock().lock();
+                    try {
+                        orderCache.put(id, responseDTO);
+                    } finally {
+                        cacheLock.writeLock().unlock();
+                    }
+                }
+
+                return responseDTO;
             }
-
-            return responseDTO;
         }
         return null;
     }

@@ -17,6 +17,8 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "order_id")
+    private Long orderId;
     private Long bookId;
     private String bookTitle;
     private Integer quantity;

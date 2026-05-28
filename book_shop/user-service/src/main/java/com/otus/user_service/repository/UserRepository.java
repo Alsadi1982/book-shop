@@ -1,6 +1,7 @@
 package com.otus.user_service.repository;
 
 import com.otus.user_service.entity.User;
+import com.otus.user_service.enums.UserRoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -114,13 +115,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findAllOrderByCreatedAtDesc();
 
     /**
-     * Найти всех пользователей, отсортированных по дате последнего входа (новые первыми)
-     * @return список пользователей
-     */
-    @Query("SELECT u FROM User u WHERE u.lastLoginAt IS NOT NULL ORDER BY u.lastLoginAt DESC")
-    List<User> findAllOrderByLastLoginAtDesc();
-
-    /**
      * Найти пользователей, зарегистрированных после определенной даты
      * @param date дата
      * @return список пользователей
@@ -178,23 +172,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @param days количество дней
      * @return массив Object[] где [0] - дата, [1] - количество
      */
-    @Query(value = "SELECT DATE(created_at) as registration_date, COUNT(*) as count " +
+    @Query(value = "SELECT CAST(created_at AS DATE) as registration_date, COUNT(*) as count " +
             "FROM users WHERE created_at >= CURRENT_DATE - CAST(:days AS integer) " +
-            "GROUP BY DATE(created_at) ORDER BY registration_date DESC",
+            "GROUP BY CAST(created_at AS DATE) ORDER BY registration_date DESC",
             nativeQuery = true)
     List<Object[]> getRegistrationStatistics(@Param("days") int days);
 
     // ==================== Обновляющие запросы ====================
 
-    /**
-     * Обновить дату последнего входа пользователя
-     * @param userId ID пользователя
-     * @param lastLoginAt дата последнего входа
-     */
-    @Modifying
-    @Transactional
-    @Query("UPDATE User u SET u.lastLoginAt = :lastLoginAt, u.updatedAt = :lastLoginAt WHERE u.id = :userId")
-    void updateLastLogin(@Param("userId") Long userId, @Param("lastLoginAt") LocalDateTime lastLoginAt);
+//    /**
+//     * Обновить дату последнего входа пользователя
+//     * @param userId ID пользователя
+//     * @param lastLoginAt дата последнего входа
+//     */
+//    @Modifying
+//    @Transactional
+//    @Query("UPDATE User u SET u.lastLoginAt = :lastLoginAt, u.updatedAt = :lastLoginAt WHERE u.id = :userId")
+//    void updateLastLogin(@Param("userId") Long userId, @Param("lastLoginAt") LocalDateTime lastLoginAt);
 
     /**
      * Активировать пользователя
@@ -232,10 +226,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @param date дата, после которой пользователи считаются неактивными
      * @return количество обновленных записей
      */
-    @Modifying
-    @Transactional
-    @Query("UPDATE User u SET u.active = false WHERE u.active = true AND u.lastLoginAt < :date")
-    int deactivateInactiveUsers(@Param("date") LocalDateTime date);
+//    @Modifying
+//    @Transactional
+//    @Query("UPDATE User u SET u.active = false WHERE u.active = true AND u.lastLoginAt < :date")
+//    int deactivateInactiveUsers(@Param("date") LocalDateTime date);
 
     // ==================== Сложные запросы с JOIN ====================
 
@@ -243,31 +237,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Получить пользователей с их адресами (если бы были адреса)
      * @return список пользователей
      */
-    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.addresses WHERE u.active = true")
-    List<User> findActiveUsersWithAddresses();
+//    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.addresses WHERE u.active = true")
+//    List<User> findActiveUsersWithAddresses();
 
-    // ==================== Агрегатные функции ====================
-
-    /**
-     * Получить средний возраст пользователей (если есть дата рождения)
-     * @return средний возраст
-     */
-    @Query("SELECT AVG(FUNCTION('YEAR', CURRENT_DATE) - FUNCTION('YEAR', u.createdAt)) FROM User u")
-    Double getAverageUserAge();
-
-    /**
-     * Получить самого старого пользователя по дате регистрации
-     * @return самый старый пользователь
-     */
-    @Query("SELECT u FROM User u ORDER BY u.createdAt ASC LIMIT 1")
-    User getOldestUser();
-
-    /**
-     * Получить самого нового пользователя
-     * @return самый новый пользователь
-     */
-    @Query("SELECT u FROM User u ORDER BY u.createdAt DESC LIMIT 1")
-    User getNewestUser();
 
     // ==================== Пагинация через параметры ====================
 

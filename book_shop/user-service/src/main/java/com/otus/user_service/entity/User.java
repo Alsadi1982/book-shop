@@ -37,4 +37,5 @@ public class User {
 
     private Boolean active = true;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

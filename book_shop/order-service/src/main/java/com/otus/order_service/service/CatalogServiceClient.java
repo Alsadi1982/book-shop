@@ -21,10 +21,10 @@ public class CatalogServiceClient {
     @Autowired
     private RestTemplate restTemplate;
 
-    @Value("${catalog.service.url}")
+    @Value("${catalog.service.url:http://localhost:8081}")
     private String catalogServiceUrl;
 
-    @Value("${user.service.url}")
+    @Value("${user.service.url:http://localhost:8083}")
     private String userServiceUrl;
 
     /**
