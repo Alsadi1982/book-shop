@@ -1,0 +1,12 @@
+dependencies:
+- name: user-service
+  repository: file://charts/user-service
+  version: 0.1.0
+- name: book-catalog-service
+  repository: file://charts/book-catalog-service
+  version: 0.1.0
+- name: order-service
+  repository: file://charts/order-service
+  version: 0.1.0
+digest: sha256:c0b54bcc9a61be0f2e091b61b6706d27407ea4697879896fdc5225a7310725e3
+generated: "2026-05-21T21:09:07.1311706+03:00"

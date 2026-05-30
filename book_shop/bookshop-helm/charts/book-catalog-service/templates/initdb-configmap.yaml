@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "book-catalog-service.fullname" . }}-initdb
+  labels:
+    {{- include "book-catalog-service.labels" . | nindent 4 }}
+data:
+  init.sql: |
+    -- Создание таблицы категорий
+    CREATE TABLE IF NOT EXISTS categories (
+        id BIGSERIAL PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        description TEXT
+        );
+
+    -- Создание таблицы книг
+    CREATE TABLE IF NOT EXISTS books (
+        id BIGSERIAL PRIMARY KEY,
+        isbn VARCHAR(20) UNIQUE NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        author VARCHAR(255),
+        description TEXT,
+        price DECIMAL(10, 2),
+        stock_quantity INTEGER DEFAULT 0,
+        category_id BIGINT,
+        publisher_id BIGINT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+        );
+
+    INSERT INTO categories (code, name, description)
+    VALUES ('FICTION', 'Художественная литература', 'Художественные произведения, романы, повести, рассказы'),
+           ('TECHNICAL', 'Техническая литература', 'Книги по программированию, IT, инженерии и технологиям'),
+           ('SCIENCE', 'Научная литература', 'Научно-популярные книги, физика, математика, биология'),
+           ('BUSINESS', 'Бизнес-литература',
+            'Книги по бизнесу, маркетингу, менеджменту и саморазвитию') ON CONFLICT (code) DO NOTHING;
+
+    -- Категория: FICTION (художественная литература) - id = 1
+    INSERT INTO books (isbn, title, author, description, price, stock_quantity, category_id, publisher_id)
+    VALUES ('978-5-17-118770-1', 'Мастер и Маргарита', 'Михаил Булгаков',
+            'Знаменитый роман Михаила Булгакова "Мастер и Маргарита" - одно из самых загадочных и захватывающих произведений XX века.',
+            599.99, 50, 1, 1),
+           ('978-5-699-96588-7', 'Преступление и наказание', 'Фёдор Достоевский',
+            'Великий роман Фёдора Достоевского о моральных дилеммах, вине и искуплении.',
+            450.00, 35, 1, 2);
+
+    -- Категория: TECHNICAL (техническая литература) - id = 2
+    INSERT INTO books (isbn, title, author, description, price, stock_quantity, category_id, publisher_id)
+    VALUES ('978-5-4461-1442-9', 'Clean Code: Идеальный программный код', 'Роберт Мартин',
+            'Книга Роберта Мартина о принципах написания чистого и поддерживаемого кода.',
+            1200.00, 100, 2, 3),
+
+           ('978-5-699-97623-4', 'Java. Полное руководство', 'Герберт Шилдт',
+            'Полное руководство по языку программирования Java от известного автора Герберта Шилдта.',
+            1500.00, 75, 2, 3);
+
+    -- Категория: SCIENCE (научная литература) - id = 3
+    INSERT INTO books (isbn, title, author, description, price, stock_quantity, category_id, publisher_id)
+    VALUES ('978-5-91671-891-1', 'Краткая история времени', 'Стивен Хокинг',
+            'Знаменитая книга Стивена Хокинга о космологии, черных дырах и природе времени.',
+            890.00, 40, 3, 4),
+
+           ('978-5-00139-123-6', 'Sapiens. Краткая история человечества', 'Юваль Ной Харари',
+            'История развития человечества от каменного века до современности.',
+            1100.00, 60, 3, 5);
+
+    -- Категория: BUSINESS (бизнес-литература) - id = 4
+    INSERT INTO books (isbn, title, author, description, price, stock_quantity, category_id, publisher_id)
+    VALUES ('978-5-9614-6373-2', 'От нуля к единице', 'Питер Тиль',
+            'Как создать стартап, который изменит будущее. Бестселлер от одного из основателей PayPal.',
+            750.00, 45, 4, 6),
+
+           ('978-5-00146-984-3', 'Думай медленно... решай быстро', 'Даниэль Канеман',
+            'Нобелевский лауреат Даниэль Канеман о двух системах мышления и принятии решений.',
+            980.00, 55, 4, 7);

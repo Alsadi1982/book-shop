@@ -14,7 +14,7 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U catalog_user -d book_catalog_db"]
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_service_db"]
       interval: 10s
       timeout: 5s
       retries: 5

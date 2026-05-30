@@ -1,0 +1,17 @@
+apiVersion: v2
+name: bookshop-helm
+description: Bookstore Microservices Application
+type: application
+version: 0.1.0
+appVersion: 1.0.0
+
+dependencies:
+  - name: user-service
+    version: 0.1.0
+    repository: "file://charts/user-service"
+  - name: book-catalog-service
+    version: 0.1.0
+    repository: "file://charts/book-catalog-service"
+  - name: order-service
+    version: 0.1.0
+    repository: "file://charts/order-service"
