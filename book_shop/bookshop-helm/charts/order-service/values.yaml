@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: v1
+  tag: v2
 
 deployment:
   containerPort: 8082
@@ -177,3 +177,5 @@ env:
     value: "http://bookshop-helm-book-catalog-service:8081"
   - name: USER_SERVICE_URL
     value: "http://bookshop-helm-user-service:8083"
+  - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+    value: "*"

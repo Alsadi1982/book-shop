@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: v1
+  tag: v2
 
 deployment:
   containerPort: 8083
@@ -175,3 +175,5 @@ env:
     value: "update"
   - name: SERVER_PORT
     value: "8083"
+  - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+    value: "*"
