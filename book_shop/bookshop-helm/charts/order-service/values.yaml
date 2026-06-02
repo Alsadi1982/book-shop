@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: v2
+  tag: v3
 
 deployment:
   containerPort: 8082
@@ -108,18 +108,38 @@ resources: {}
   #   cpu: 100m
 #   memory: 128Mi
 
-# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-#livenessProbe:
-#  enabled: true
-#  path: /api/orders/health
-#  initialDelaySeconds: 60
-#  periodSeconds: 10
-#
-#readinessProbe:
-#  enabled: true
-#  path: /api/orders/health
-#  initialDelaySeconds: 30
-#  periodSeconds: 5
+# ============================================
+# HEALTH PROBES - НАСТРОЙКИ ДЛЯ KUBERNETES
+# ============================================
+livenessProbe:
+  enabled: true
+  # Путь к health endpoint
+  path: /api/orders/health
+  # Начальная задержка (ждем запуска приложения и БД)
+  initialDelaySeconds: 60
+  # Интервал между проверками
+  periodSeconds: 10
+  # Количество неудачных проверок перед перезапуском пода
+  failureThreshold: 3
+  # Таймаут одного запроса
+  timeoutSeconds: 5
+  # Количество успешных проверок для отметки пода как живым
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  # Путь к health endpoint
+  path: /api/orders/health
+  # Начальная задержка (ждем инициализации)
+  initialDelaySeconds: 30
+  # Интервал между проверками
+  periodSeconds: 5
+  # Количество неудачных проверок перед исключением из сервиса
+  failureThreshold: 3
+  # Количество успешных проверок для включения в сервис
+  successThreshold: 1
+  # Таймаут одного запроса
+  timeoutSeconds: 5
 
 # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
@@ -161,8 +181,11 @@ postgresql:
     username: order_user
     password: order_password
 
-# External service URLs
+# ============================================
+# ENVIRONMENT VARIABLES
+# ============================================
 env:
+  # База данных
   - name: SPRING_DATASOURCE_URL
     value: "jdbc:postgresql://localhost:5432/order_db"
   - name: SPRING_DATASOURCE_USERNAME
@@ -173,9 +196,32 @@ env:
     value: "update"
   - name: SERVER_PORT
     value: "8082"
+
+  # Внешние сервисы
   - name: CATALOG_SERVICE_URL
     value: "http://bookshop-helm-book-catalog-service:8081"
   - name: USER_SERVICE_URL
     value: "http://bookshop-helm-user-service:8083"
+
+  # Actuator и мониторинг
   - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
     value: "*"
+  - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS
+    value: "always"
+  - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+    value: "true"
+  - name: MANAGEMENT_HEALTH_CIRCUITBREAKERS_ENABLED
+    value: "true"
+  - name: MANAGEMENT_HEALTH_RATELIMITERS_ENABLED
+    value: "true"
+
+  # Resilience4j (опциональное переопределение)
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_ORDERSERVICE_SLIDING-WINDOW-SIZE
+    value: "20"
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_ORDERSERVICE_FAILURE-RATE-THRESHOLD
+    value: "50"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_ORDERSERVICE_LIMIT-FOR-PERIOD
+    value: "5"
+
+  - name: SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED
+    value: "false"

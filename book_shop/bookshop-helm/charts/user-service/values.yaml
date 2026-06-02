@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: v2
+  tag: v3
 
 deployment:
   containerPort: 8083
@@ -114,25 +114,33 @@ resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
-# lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-#   limits:
-#     cpu: 500m
-#     memory: 512Mi
-#   requests:
-#     cpu: 250m
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  #   limits:
+  #     cpu: 500m
+  #     memory: 512Mi
+  #   requests:
+  #     cpu: 250m
 #     memory: 256Mi
 
-# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-#livenessProbe:
-#  enabled: true
-#  path: /api/users/health
-#  initialDelaySeconds: 60
-#  periodSeconds: 10
-#readinessProbe:
-#  enabled: true
-#  path: /api/users/health
-#  initialDelaySeconds: 30
-#  periodSeconds: 5
+# ============================================
+# HEALTH PROBES
+# ============================================
+livenessProbe:
+  enabled: true
+  path: /api/users/health
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  failureThreshold: 3
+  timeoutSeconds: 5
+
+readinessProbe:
+  enabled: true
+  path: /api/users/health
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+  timeoutSeconds: 5
 
 # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
@@ -161,8 +169,11 @@ tolerations: []
 
 affinity: {}
 
-# Environment variables
+# ============================================
+# ENVIRONMENT VARIABLES (ДОБАВЛЕНЫ RESILIENCE4J!)
+# ============================================
 env:
+  # База данных
   - name: SPRING_DATASOURCE_URL
     value: "jdbc:postgresql://localhost:5432/user_service_db"
   - name: SPRING_DATASOURCE_USERNAME
@@ -175,5 +186,136 @@ env:
     value: "update"
   - name: SERVER_PORT
     value: "8083"
+
+  # ============================================
+  # ACTUATOR И МОНИТОРИНГ
+  # ============================================
   - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
     value: "*"
+  - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS
+    value: "always"
+  - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+    value: "true"
+  - name: MANAGEMENT_HEALTH_CIRCUITBREAKERS_ENABLED
+    value: "true"
+  - name: MANAGEMENT_HEALTH_RATELIMITERS_ENABLED
+    value: "true"
+
+  # ============================================
+  # RESILIENCE4J CIRCUIT BREAKER
+  # ============================================
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_SLIDING-WINDOW-TYPE
+    value: "count_based"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_SLIDING-WINDOW-SIZE
+    value: "10"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_FAILURE-RATE-THRESHOLD
+    value: "50"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_WAIT-DURATION-IN-OPEN-STATE
+    value: "10s"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_PERMITTED-NUMBER-OF-CALLS-IN-HALF-OPEN-STATE
+    value: "3"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_MINIMUM-NUMBER-OF-CALLS
+    value: "5"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_SLOW-CALL-DURATION-THRESHOLD
+    value: "2s"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_SLOW-CALL-RATE-THRESHOLD
+    value: "50"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_AUTOMATIC-TRANSITION-FROM-OPEN-TO-HALF-OPEN-ENABLED
+    value: "true"
+
+  # Circuit Breaker для userService
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_USERSERVICE_SLIDING-WINDOW-SIZE
+    value: "30"
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_USERSERVICE_FAILURE-RATE-THRESHOLD
+    value: "40"
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_USERSERVICE_WAIT-DURATION-IN-OPEN-STATE
+    value: "10s"
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_USERSERVICE_PERMITTED-NUMBER-OF-CALLS-IN-HALF-OPEN-STATE
+    value: "3"
+
+  # ============================================
+  # RESILIENCE4J RATE LIMITER
+  # ============================================
+  - name: RESILIENCE4J_RATELIMITER_CONFIGS_DEFAULT_LIMIT-FOR-PERIOD
+    value: "10"
+  - name: RESILIENCE4J_RATELIMITER_CONFIGS_DEFAULT_LIMIT-REFRESH-PERIOD
+    value: "1s"
+  - name: RESILIENCE4J_RATELIMITER_CONFIGS_DEFAULT_TIMEOUT-DURATION
+    value: "500ms"
+
+  # Rate Limiter для userService (20 запросов/сек - пользователи часто запрашиваются)
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE_LIMIT-FOR-PERIOD
+    value: "20"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE_LIMIT-REFRESH-PERIOD
+    value: "1s"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE_TIMEOUT-DURATION
+    value: "500ms"
+
+  # Строгий лимит для регистрации (защита от ботов)
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE-REGISTER_LIMIT-FOR-PERIOD
+    value: "3"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE-REGISTER_LIMIT-REFRESH-PERIOD
+    value: "1s"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE-REGISTER_TIMEOUT-DURATION
+    value: "0ms"
+
+  # Строгий лимит для логина (защита от брутфорса)
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE-LOGIN_LIMIT-FOR-PERIOD
+    value: "5"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE-LOGIN_LIMIT-REFRESH-PERIOD
+    value: "1s"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_USERSERVICE-LOGIN_TIMEOUT-DURATION
+    value: "0ms"
+
+  # ============================================
+  # RESILIENCE4J RETRY
+  # ============================================
+  - name: RESILIENCE4J_RETRY_CONFIGS_DEFAULT_MAX-ATTEMPTS
+    value: "3"
+  - name: RESILIENCE4J_RETRY_CONFIGS_DEFAULT_WAIT-DURATION
+    value: "1s"
+  - name: RESILIENCE4J_RETRY_CONFIGS_DEFAULT_EXPONENTIAL-BACKOFF-MULTIPLIER
+    value: "2"
+  - name: RESILIENCE4J_RETRY_CONFIGS_DEFAULT_MAX-WAIT-DURATION
+    value: "5s"
+
+  # Retry для userService (2 попытки - осторожно с паролями)
+  - name: RESILIENCE4J_RETRY_INSTANCES_USERSERVICE_MAX-ATTEMPTS
+    value: "2"
+  - name: RESILIENCE4J_RETRY_INSTANCES_USERSERVICE_WAIT-DURATION
+    value: "1s"
+
+  # ============================================
+  # RESILIENCE4J BULKHEAD
+  # ============================================
+  - name: RESILIENCE4J_BULKHEAD_CONFIGS_DEFAULT_MAX-CONCURRENT-CALLS
+    value: "20"
+  - name: RESILIENCE4J_BULKHEAD_CONFIGS_DEFAULT_MAX-WAIT-DURATION
+    value: "500ms"
+
+  - name: RESILIENCE4J_BULKHEAD_INSTANCES_USERSERVICE_MAX-CONCURRENT-CALLS
+    value: "15"
+  - name: RESILIENCE4J_BULKHEAD_INSTANCES_USERSERVICE_MAX-WAIT-DURATION
+    value: "500ms"
+
+  # ============================================
+  # RESILIENCE4J TIME LIMITER
+  # ============================================
+  - name: RESILIENCE4J_TIMELIMITER_CONFIGS_DEFAULT_TIMEOUT-DURATION
+    value: "5s"
+  - name: RESILIENCE4J_TIMELIMITER_CONFIGS_DEFAULT_CANCEL-RUNNING-FUTURE
+    value: "true"
+
+  - name: RESILIENCE4J_TIMELIMITER_INSTANCES_USERSERVICE_TIMEOUT-DURATION
+    value: "5s"
+
+  # ============================================
+  # LOGGING
+  # ============================================
+  - name: LOGGING_LEVEL_IO_GITHUB_RESILIENCE4J_CIRCUITBREAKER
+    value: "DEBUG"
+  - name: LOGGING_LEVEL_IO_GITHUB_RESILIENCE4J_RATELIMITER
+    value: "DEBUG"
+
+  - name: SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED
+    value: "false"

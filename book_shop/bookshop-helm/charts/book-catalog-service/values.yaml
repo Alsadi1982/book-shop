@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: v2
+  tag: v3
 
 deployment:
   containerPort: 8081
@@ -125,17 +125,27 @@ resources: {}
   #   memory: 128Mi
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-#livenessProbe:
-#  enabled: true
-#  path: /actuator/health
-#  initialDelaySeconds: 60
-#  periodSeconds: 10
-#
-#readinessProbe:
-#  enabled: true
-#  path: /actuator/health
-#  initialDelaySeconds: 30
-#  periodSeconds: 5
+livenessProbe:
+  enabled: true
+  path: /actuator/health
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  # Количество неудачных проверок перед перезапуском пода
+  failureThreshold: 3
+  # Таймаут одного запроса
+  timeoutSeconds: 5
+
+readinessProbe:
+  enabled: true
+  path: /actuator/health
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  # Количество неудачных проверок перед исключением из сервиса
+  failureThreshold: 3
+  # Количество успешных проверок для включения в сервис
+  successThreshold: 1
+  # Таймаут одного запроса
+  timeoutSeconds: 5
 
 # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
@@ -190,5 +200,112 @@ env:
     value: "update"
   - name: SERVER_PORT
     value: "8081"
+
+  # ============================================
+  # ACTUATOR И МОНИТОРИНГ
+  # ============================================
   - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
     value: "*"
+  - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS
+    value: "always"
+  - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+    value: "true"
+  - name: MANAGEMENT_HEALTH_CIRCUITBREAKERS_ENABLED
+    value: "true"
+  - name: MANAGEMENT_HEALTH_RATELIMITERS_ENABLED
+    value: "true"
+
+  # ============================================
+  # RESILIENCE4J CIRCUIT BREAKER
+  # ============================================
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_SLIDING-WINDOW-TYPE
+    value: "count_based"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_SLIDING-WINDOW-SIZE
+    value: "10"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_FAILURE-RATE-THRESHOLD
+    value: "50"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_WAIT-DURATION-IN-OPEN-STATE
+    value: "10s"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_PERMITTED-NUMBER-OF-CALLS-IN-HALF-OPEN-STATE
+    value: "3"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_MINIMUM-NUMBER-OF-CALLS
+    value: "5"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_SLOW-CALL-DURATION-THRESHOLD
+    value: "2s"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_SLOW-CALL-RATE-THRESHOLD
+    value: "50"
+  - name: RESILIENCE4J_CIRCUITBREAKER_CONFIGS_DEFAULT_AUTOMATIC-TRANSITION-FROM-OPEN-TO-HALF-OPEN-ENABLED
+    value: "true"
+
+  # Circuit Breaker для catalogService
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_CATALOGSERVICE_SLIDING-WINDOW-SIZE
+    value: "20"
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_CATALOGSERVICE_FAILURE-RATE-THRESHOLD
+    value: "60"
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_CATALOGSERVICE_WAIT-DURATION-IN-OPEN-STATE
+    value: "15s"
+  - name: RESILIENCE4J_CIRCUITBREAKER_INSTANCES_CATALOGSERVICE_PERMITTED-NUMBER-OF-CALLS-IN-HALF-OPEN-STATE
+    value: "5"
+
+  # ============================================
+  # RESILIENCE4J RATE LIMITER
+  # ============================================
+  - name: RESILIENCE4J_RATELIMITER_CONFIGS_DEFAULT_LIMIT-FOR-PERIOD
+    value: "10"
+  - name: RESILIENCE4J_RATELIMITER_CONFIGS_DEFAULT_LIMIT-REFRESH-PERIOD
+    value: "1s"
+  - name: RESILIENCE4J_RATELIMITER_CONFIGS_DEFAULT_TIMEOUT-DURATION
+    value: "500ms"
+
+  # Rate Limiter для catalogService
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_CATALOGSERVICE_LIMIT-FOR-PERIOD
+    value: "5"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_CATALOGSERVICE_LIMIT-REFRESH-PERIOD
+    value: "1s"
+  - name: RESILIENCE4J_RATELIMITER_INSTANCES_CATALOGSERVICE_TIMEOUT-DURATION
+    value: "1s"
+
+  # ============================================
+  # RESILIENCE4J RETRY
+  # ============================================
+  - name: RESILIENCE4J_RETRY_CONFIGS_DEFAULT_MAX-ATTEMPTS
+    value: "3"
+  - name: RESILIENCE4J_RETRY_CONFIGS_DEFAULT_WAIT-DURATION
+    value: "1s"
+  - name: RESILIENCE4J_RETRY_CONFIGS_DEFAULT_EXPONENTIAL-BACKOFF-MULTIPLIER
+    value: "2"
+  - name: RESILIENCE4J_RETRY_CONFIGS_DEFAULT_MAX-WAIT-DURATION
+    value: "5s"
+
+  # Retry для catalogService
+  - name: RESILIENCE4J_RETRY_INSTANCES_CATALOGSERVICE_MAX-ATTEMPTS
+    value: "2"
+  - name: RESILIENCE4J_RETRY_INSTANCES_CATALOGSERVICE_WAIT-DURATION
+    value: "2s"
+
+  # ============================================
+  # RESILIENCE4J BULKHEAD
+  # ============================================
+  - name: RESILIENCE4J_BULKHEAD_CONFIGS_DEFAULT_MAX-CONCURRENT-CALLS
+    value: "25"
+  - name: RESILIENCE4J_BULKHEAD_CONFIGS_DEFAULT_MAX-WAIT-DURATION
+    value: "10ms"
+
+  # ============================================
+  # RESILIENCE4J TIME LIMITER
+  # ============================================
+  - name: RESILIENCE4J_TIMELIMITER_CONFIGS_DEFAULT_TIMEOUT-DURATION
+    value: "5s"
+  - name: RESILIENCE4J_TIMELIMITER_CONFIGS_DEFAULT_CANCEL-RUNNING-FUTURE
+    value: "true"
+
+  # ============================================
+  # LOGGING
+  # ============================================
+  - name: LOGGING_LEVEL_IO_GITHUB_RESILIENCE4J_CIRCUITBREAKER
+    value: "DEBUG"
+  - name: LOGGING_LEVEL_IO_GITHUB_RESILIENCE4J_RATELIMITER
+    value: "DEBUG"
+
+  - name: SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED
+    value: "false"
