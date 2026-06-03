@@ -1,0 +1,50 @@
+GET http://localhost:8082/api/orders/1
+
+POST http://localhost:8082/api/orders
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "shippingAddress": "г. Москва, ул. Вавилова, д. 12, кв. 45",
+  "paymentMethod": "CREDIT_CARD",
+  "items": [
+    {
+      "bookId": 1,
+      "quantity": 3
+    }
+  ]
+}
+
+GET http://localhost:8082/api/orders/users/1
+
+
+GET http://localhost:8083/api/users
+
+GET http://localhost:8083/api/users/email/admin@bookstore.com
+
+POST http://localhost:8083/api/users/login
+Content-Type: application/json
+{
+  "usernameOrEmail": "ales@mail.ru",
+  "password": "admin1"
+}
+
+POST http://localhost:8083/api/users/6/change-password
+Content-Type: application/json
+{
+  "currentPassword": "alex123",
+  "newPassword": "admin1",
+  "confirmPassword": "admin1"
+}
+
+POST http://localhost:8083/api/users/register
+Content-Type: application/json
+{
+  "username": "alex",
+  "email": "ales@mail.ru",
+  "password": "alex123",
+  "firstName": "Alex",
+  "lastName": "Sadikov",
+  "phone": "+79086752341"
+}
+GET http://localhost:32290/actuator/health

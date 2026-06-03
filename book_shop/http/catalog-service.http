@@ -1,0 +1,234 @@
+# Catalog Service HTTP Examples
+
+## Получение всех книг
+
+GET http://localhost:8081/api/catalog/books
+Accept: application/json
+
+### Response 200 OK
+```json
+[
+  {
+    "id": 1,
+    "title": "Война и мир",
+    "author": "Л.Н. Толстой",
+    "isbn": "978-5-222-01234-5",
+    "categoryCode": "LIT",
+    "price": 450.00,
+    "stock": 10,
+    "createdAt": "2025-01-01T10:00:00"
+  }
+]
+```
+
+---
+
+## Получение книги по ID
+
+GET http://localhost:8081/api/catalog/books/1
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "title": "Война и мир",
+  "author": "Л.Н. Толстой",
+  "isbn": "978-5-222-01234-5",
+  "categoryCode": "LIT",
+  "price": 450.00,
+  "stock": 10,
+  "createdAt": "2025-01-01T10:00:00"
+}
+```
+
+### Response 404 Not Found
+```json
+{
+  "error": "Book not found"
+}
+```
+
+---
+
+## Создание новой книги
+
+POST http://localhost:8081/api/catalog/books
+Content-Type: application/json
+
+```json
+{
+  "title": "Преступление и наказание",
+  "author": "Ф.М. Достоевский",
+  "isbn": "978-5-222-01235-2",
+  "categoryCode": "LIT",
+  "price": 380.00,
+  "stock": 15
+}
+```
+
+### Response 201 Created
+```json
+{
+  "id": 2,
+  "title": "Преступление и наказание",
+  "author": "Ф.М. Достоевский",
+  "isbn": "978-5-222-01235-2",
+  "categoryCode": "LIT",
+  "price": 380.00,
+  "stock": 15,
+  "createdAt": "2025-06-04T12:00:00"
+}
+```
+
+---
+
+## Обновление количества на складе
+
+PUT http://localhost:8081/api/catalog/books/1/stock?stock=20
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "title": "Война и мир",
+  "author": "Л.Н. Толстой",
+  "isbn": "978-5-222-01234-5",
+  "categoryCode": "LIT",
+  "price": 450.00,
+  "stock": 20,
+  "createdAt": "2025-01-01T10:00:00"
+}
+```
+
+---
+
+## Проверка наличия на складе
+
+POST http://localhost:8081/api/catalog/books/1/check-stock?quantity=5
+Accept: application/json
+
+### Response 200 OK (доступно)
+```json
+true
+```
+
+### Response 200 OK (недоступно)
+```json
+false
+```
+
+---
+
+## Возврат товара на склад
+
+POST http://localhost:8081/api/catalog/books/1/return-stock?quantity=3
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "success": true,
+  "message": "Stock updated successfully",
+  "book": {
+    "id": 1,
+    "title": "Война и мир",
+    "author": "Л.Н. Толстой",
+    "isbn": "978-5-222-01234-5",
+    "categoryCode": "LIT",
+    "price": 450.00,
+    "stock": 23,
+    "createdAt": "2025-01-01T10:00:00"
+  }
+}
+```
+
+---
+
+## Получение всех категорий
+
+GET http://localhost:8081/api/catalog/categories
+Accept: application/json
+
+### Response 200 OK
+```json
+[
+  {
+    "id": 1,
+    "code": "LIT",
+    "name": "Художественная литература",
+    "description": "Художественные книги"
+  },
+  {
+    "id": 2,
+    "code": "SCI",
+    "name": "Научная литература",
+    "description": "Научные издания"
+  }
+]
+```
+
+---
+
+## Получение категории по коду
+
+GET http://localhost:8081/api/catalog/categories/LIT
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "code": "LIT",
+  "name": "Художественная литература",
+  "description": "Художественные книги"
+}
+```
+
+---
+
+## Health Check
+
+GET http://localhost:8081/actuator/health
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "status": "UP",
+  "components": {
+    "db": {
+      "status": "UP",
+      "details": {
+        "database": "PostgreSQL",
+        "validationQuery": "isValid()"
+      }
+    },
+    "discoveryComposite": {
+      "status": "UNKNOWN"
+    },
+    "ping": {
+      "status": "UP"
+    }
+  }
+}
+```
+
+---
+
+## Prometheus Metrics
+
+GET http://localhost:8081/actuator/prometheus
+
+### Response 200 OK
+```
+# HELP jvm_memory_used_bytes The amount of memory used
+# TYPE jvm_memory_used_bytes gauge
+jvm_memory_used_bytes{area="heap",id="G1 Eden Space",} 1.23456789E8
+jvm_memory_used_bytes{area="heap",id="G1 Old Gen",} 9.87654321E7
+# HELP http_server_requests_seconds 
+# TYPE http_server_requests_seconds summary
+http_server_requests_seconds_count{method="GET",status="200",uri="/api/catalog/books",} 100
+http_server_requests_seconds_sum{method="GET",status="200",uri="/api/catalog/books",} 5.678
+```

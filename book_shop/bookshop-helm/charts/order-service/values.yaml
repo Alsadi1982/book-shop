@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: v3
+  tag: v4
 
 deployment:
   containerPort: 8082
@@ -225,3 +225,11 @@ env:
 
   - name: SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED
     value: "false"
+  - name: LOKI_URL
+    value: "http://loki:3100/loki/api/v1/push"
+  - name: APP_NAME
+    value: "order-service"
+  - name: LOGGING_LEVEL_COM_OTUS
+    value: "INFO"
+  - name: LOGGING_LEVEL_IO_GITHUB_RESILIENCE4J
+    value: "DEBUG"

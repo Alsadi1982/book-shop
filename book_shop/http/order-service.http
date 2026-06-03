@@ -1,0 +1,320 @@
+# Order Service HTTP Examples
+
+## Создание нового заказа
+
+POST http://localhost:8082/api/orders
+Content-Type: application/json
+
+```json
+{
+  "userId": 1,
+  "items": [
+    {
+      "bookId": 1,
+      "quantity": 2,
+      "price": 450.00
+    },
+    {
+      "bookId": 2,
+      "quantity": 1,
+      "price": 380.00
+    }
+  ],
+  "shippingAddress": "г. Москва, ул. Пушкина, д. 10"
+}
+```
+
+### Response 201 Created
+```json
+{
+  "id": 1,
+  "orderNumber": "ORD-2025-06-04-001",
+  "userId": 1,
+  "status": "NEW",
+  "totalAmount": 1280.00,
+  "items": [
+    {
+      "id": 1,
+      "bookId": 1,
+      "quantity": 2,
+      "price": 450.00,
+      "subtotal": 900.00
+    },
+    {
+      "id": 2,
+      "bookId": 2,
+      "quantity": 1,
+      "price": 380.00,
+      "subtotal": 380.00
+    }
+  ],
+  "shippingAddress": "г. Москва, ул. Пушкина, д. 10",
+  "createdAt": "2025-06-04T12:30:00",
+  "updatedAt": "2025-06-04T12:30:00"
+}
+```
+
+### Response 400 Bad Request
+```json
+{
+  "error": "Insufficient stock for book id=1"
+}
+```
+
+---
+
+## Получение заказа по ID
+
+GET http://localhost:8082/api/orders/1
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "orderNumber": "ORD-2025-06-04-001",
+  "userId": 1,
+  "status": "NEW",
+  "totalAmount": 1280.00,
+  "items": [
+    {
+      "id": 1,
+      "bookId": 1,
+      "quantity": 2,
+      "price": 450.00,
+      "subtotal": 900.00
+    },
+    {
+      "id": 2,
+      "bookId": 2,
+      "quantity": 1,
+      "price": 380.00,
+      "subtotal": 380.00
+    }
+  ],
+  "shippingAddress": "г. Москва, ул. Пушкина, д. 10",
+  "createdAt": "2025-06-04T12:30:00",
+  "updatedAt": "2025-06-04T12:30:00"
+}
+```
+
+---
+
+## Получение заказа по номеру
+
+GET http://localhost:8082/api/orders/number/ORD-2025-06-04-001
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "orderNumber": "ORD-2025-06-04-001",
+  "userId": 1,
+  "status": "NEW",
+  "totalAmount": 1280.00,
+  "items": [...]
+}
+```
+
+---
+
+## Получение заказов пользователя
+
+GET http://localhost:8082/api/orders/user/1
+Accept: application/json
+
+### Response 200 OK
+```json
+[
+  {
+    "id": 1,
+    "orderNumber": "ORD-2025-06-04-001",
+    "userId": 1,
+    "status": "NEW",
+    "totalAmount": 1280.00,
+    "createdAt": "2025-06-04T12:30:00"
+  },
+  {
+    "id": 2,
+    "orderNumber": "ORD-2025-06-03-001",
+    "userId": 1,
+    "status": "DELIVERED",
+    "totalAmount": 850.00,
+    "createdAt": "2025-06-03T10:15:00"
+  }
+]
+```
+
+---
+
+## Получение заказов по статусу
+
+GET http://localhost:8082/api/orders/status/NEW
+Accept: application/json
+
+### Response 200 OK
+```json
+[
+  {
+    "id": 1,
+    "orderNumber": "ORD-2025-06-04-001",
+    "userId": 1,
+    "status": "NEW",
+    "totalAmount": 1280.00,
+    "createdAt": "2025-06-04T12:30:00"
+  }
+]
+```
+
+---
+
+## Получение заказов пользователя по статусу
+
+GET http://localhost:8082/api/orders/user/1/status/NEW
+Accept: application/json
+
+### Response 200 OK
+```json
+[
+  {
+    "id": 1,
+    "orderNumber": "ORD-2025-06-04-001",
+    "userId": 1,
+    "status": "NEW",
+    "totalAmount": 1280.00,
+    "createdAt": "2025-06-04T12:30:00"
+  }
+]
+```
+
+---
+
+## Обновление статуса заказа (по ID)
+
+PUT http://localhost:8082/api/orders/1/status
+Content-Type: application/json
+
+```json
+{
+  "status": "PROCESSING"
+}
+```
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "orderNumber": "ORD-2025-06-04-001",
+  "userId": 1,
+  "status": "PROCESSING",
+  "totalAmount": 1280.00,
+  "items": [...],
+  "updatedAt": "2025-06-04T13:00:00"
+}
+```
+
+---
+
+## Обновление статуса заказа (по номеру)
+
+PUT http://localhost:8082/api/orders/number/ORD-2025-06-04-001/status
+Content-Type: application/json
+
+```json
+{
+  "status": "DELIVERED"
+}
+```
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "orderNumber": "ORD-2025-06-04-001",
+  "userId": 1,
+  "status": "DELIVERED",
+  "totalAmount": 1280.00,
+  "items": [...],
+  "updatedAt": "2025-06-04T14:00:00"
+}
+```
+
+---
+
+## Отмена заказа
+
+DELETE http://localhost:8082/api/orders/1?reason=Client%20requested%20cancellation
+Accept: application/json
+
+### Response 204 No Content
+
+---
+
+## Получение общей статистики заказов
+
+GET http://localhost:8082/api/orders/statistics
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "totalOrders": 150,
+  "totalRevenue": 450000.00,
+  "ordersByStatus": {
+    "NEW": 25,
+    "PROCESSING": 30,
+    "DELIVERED": 80,
+    "CANCELLED": 15
+  },
+  "averageOrderValue": 3000.00
+}
+```
+
+---
+
+## Получение статистики пользователя
+
+GET http://localhost:8082/api/orders/user/1/statistics
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "userId": 1,
+  "totalOrders": 10,
+  "totalSpent": 15000.00,
+  "ordersByStatus": {
+    "NEW": 2,
+    "DELIVERED": 8
+  },
+  "lastOrderDate": "2025-06-04T12:30:00"
+}
+```
+
+---
+
+## Health Check
+
+GET http://localhost:8082/api/orders/health
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "status": "UP",
+  "service": "order-service"
+}
+```
+
+---
+
+## Prometheus Metrics
+
+GET http://localhost:8082/actuator/prometheus
+
+### Response 200 OK (пример метрик)
+```
+http_server_requests_seconds_count{method="POST",status="201",uri="/api/orders",} 50
+http_server_requests_seconds_sum{method="POST",status="201",uri="/api/orders",} 2.345
+```

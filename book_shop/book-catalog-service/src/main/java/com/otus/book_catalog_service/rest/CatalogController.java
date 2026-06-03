@@ -48,6 +48,14 @@ public class CatalogController {
         return ResponseEntity.ok(catalogService.getAllBooks());
     }
 
+    public ResponseEntity<?> getAllBooksFallback(Throwable t) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of(
+                        "error", "Service temporarily unavailable",
+                        "message", "Cannot fetch books at this moment"
+                ));
+    }
+
     @PostMapping("/books")
     @CircuitBreaker(name = "catalogService", fallbackMethod = "createBookFallback")
     @RateLimiter(name = "catalogService")

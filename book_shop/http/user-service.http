@@ -1,0 +1,280 @@
+# User Service HTTP Examples
+
+## Регистрация нового пользователя
+
+POST http://localhost:8083/api/users/register
+Content-Type: application/json
+
+```json
+{
+  "username": "ivan_petrov",
+  "email": "ivan.petrov@example.com",
+  "password": "SecurePass123!",
+  "firstName": "Иван",
+  "lastName": "Петров",
+  "phone": "+79111234567"
+}
+```
+
+### Response 201 Created
+```json
+{
+  "id": 1,
+  "username": "ivan_petrov",
+  "email": "ivan.petrov@example.com",
+  "firstName": "Иван",
+  "lastName": "Петров",
+  "phone": "+79111234567",
+  "isActive": true,
+  "createdAt": "2025-06-04T12:00:00",
+  "updatedAt": "2025-06-04T12:00:00"
+}
+```
+
+### Response 400 Bad Request (дубликат)
+```json
+{
+  "error": "Username already exists"
+}
+```
+
+### Response 400 Bad Request (пароль не соответствует требованиям)
+```json
+{
+  "error": "Password must contain at least one uppercase letter, one lowercase letter, and one digit"
+}
+```
+
+---
+
+## Вход в систему
+
+POST http://localhost:8083/api/users/login
+Content-Type: application/json
+
+```json
+{
+  "usernameOrEmail": "ivan_petrov",
+  "password": "SecurePass123!"
+}
+```
+
+### Response 200 OK
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "username": "ivan_petrov",
+    "email": "ivan.petrov@example.com",
+    "firstName": "Иван",
+    "lastName": "Петров",
+    "phone": "+79111234567"
+  }
+}
+```
+
+### Response 401 Unauthorized
+```json
+{
+  "success": false,
+  "message": "Invalid credentials"
+}
+```
+
+---
+
+## Получение пользователя по ID
+
+GET http://localhost:8083/api/users/1
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "username": "ivan_petrov",
+  "email": "ivan.petrov@example.com",
+  "firstName": "Иван",
+  "lastName": "Петров",
+  "phone": "+79111234567",
+  "isActive": true,
+  "createdAt": "2025-06-04T12:00:00",
+  "updatedAt": "2025-06-04T12:00:00"
+}
+```
+
+---
+
+## Получение пользователя по email
+
+GET http://localhost:8083/api/users/email/ivan.petrov@example.com
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "username": "ivan_petrov",
+  "email": "ivan.petrov@example.com",
+  "firstName": "Иван",
+  "lastName": "Петров",
+  "phone": "+79111234567",
+  "isActive": true,
+  "createdAt": "2025-06-04T12:00:00"
+}
+```
+
+---
+
+## Получение всех пользователей
+
+GET http://localhost:8083/api/users
+Accept: application/json
+
+### Response 200 OK
+```json
+[
+  {
+    "id": 1,
+    "username": "ivan_petrov",
+    "email": "ivan.petrov@example.com",
+    "firstName": "Иван",
+    "lastName": "Петров",
+    "phone": "+79111234567",
+    "isActive": true
+  },
+  {
+    "id": 2,
+    "username": "anna_sidorova",
+    "email": "anna.sidorova@example.com",
+    "firstName": "Анна",
+    "lastName": "Сидорова",
+    "phone": "+79219876543",
+    "isActive": true
+  }
+]
+```
+
+---
+
+## Обновление профиля пользователя
+
+PUT http://localhost:8083/api/users/1
+Content-Type: application/json
+
+```json
+{
+  "firstName": "Иван",
+  "lastName": "Петров",
+  "phone": "+79119998877"
+}
+```
+
+### Response 200 OK
+```json
+{
+  "id": 1,
+  "username": "ivan_petrov",
+  "email": "ivan.petrov@example.com",
+  "firstName": "Иван",
+  "lastName": "Петров",
+  "phone": "+79119998877",
+  "isActive": true,
+  "updatedAt": "2025-06-04T13:00:00"
+}
+```
+
+---
+
+## Изменение пароля
+
+POST http://localhost:8083/api/users/1/change-password
+Content-Type: application/json
+
+```json
+{
+  "currentPassword": "SecurePass123!",
+  "newPassword": "NewSecurePass456!"
+}
+```
+
+### Response 200 OK
+```json
+{
+  "message": "Password changed successfully"
+}
+```
+
+### Response 400 Bad Request
+```json
+{
+  "error": "Current password is incorrect"
+}
+```
+
+---
+
+## Деактивация пользователя
+
+POST http://localhost:8083/api/users/1/deactivate
+Accept: application/json
+
+### Response 204 No Content
+
+---
+
+## Активация пользователя
+
+POST http://localhost:8083/api/users/1/activate
+Accept: application/json
+
+### Response 204 No Content
+
+---
+
+## Очистка кэша
+
+DELETE http://localhost:8083/api/users/cache
+Accept: application/json
+
+### Response 204 No Content
+
+---
+
+## Health Check
+
+GET http://localhost:8083/api/users/health
+Accept: application/json
+
+### Response 200 OK
+```json
+{
+  "status": "UP",
+  "service": "user-service"
+}
+```
+
+---
+
+## Prometheus Metrics
+
+GET http://localhost:8083/actuator/prometheus
+
+### Response 200 OK (пример метрик)
+```
+http_server_requests_seconds_count{method="POST",status="200",uri="/api/users/login",} 25
+http_server_requests_seconds_sum{method="POST",status="200",uri="/api/users/login",} 1.234
+```
+
+---
+
+## Пример запроса с заголовком авторизации
+
+GET http://localhost:8083/api/users/1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Accept: application/json
+
+> **Примечание**: Для protected endpoints требуется Bearer token (после входа в систему)
